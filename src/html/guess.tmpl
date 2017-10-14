@@ -12,9 +12,9 @@
     <h1>Guessing Game</h1>
     <a href="/guess">New Game</a>
     <h2>{{.Text}}</h2>
-    <form action="/guess" method="get">
-      <input name="guess" ></input>
-      <button>Guess</button>
+    <form action="/guess/" method="get">
+      Guess: <input type="text" name="guess"/></br>
+      <input type="submit" value="Submit"/> 
     </form>
     <p>You guessed {{.Guess}}</p>
     <p>{{.DisplayMessage}}</p>
