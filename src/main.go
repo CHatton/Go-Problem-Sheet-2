@@ -8,7 +8,14 @@ import (
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Guessing Game")
+	htmlPage := `<!DOCTYPE html>
+                    <html>
+                        <body>
+                            <h1>Guessing Game</h1>
+                        </body>
+                    </html>`
+
+	fmt.Fprintf(w, htmlPage)
 }
 
 func main() {
