@@ -12,11 +12,18 @@ import (
 )
 
 func main() {
-	msg := message.New("Guess a number between 1 and 20")
+	msg := message.New("Guess a number between 1 and 20", "")
 	port := getPort()
 	// I consulted this article http://jessekallhoff.com/2013/04/14/go-web-apps-serving-static-files/
 	// on how to server specifc html pages. Not just index in the specified folder.
 	http.HandleFunc("/guess/", func(w http.ResponseWriter, r *http.Request) {
+
+		if userHasGuess(r) {
+			usersGuess := r.URL.Query().Get("guess")
+			msg.Guess = string(usersGuess)
+		} else {
+
+		}
 
 		if !hasCookies(r) {
 			// generate a new number between 1 - 20
@@ -41,6 +48,10 @@ func main() {
 	})
 
 	http.ListenAndServe(":"+port, nil)
+}
+
+func userHasGuess(r *http.Request) bool {
+	return len(r.URL.Query().Get("guess")) != 0
 }
 
 func hasCookies(r *http.Request) bool {

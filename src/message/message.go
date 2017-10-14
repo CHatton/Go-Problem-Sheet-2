@@ -1,13 +1,14 @@
 package message
 
 type Message struct {
-	Text string
+	Text, Guess string
 }
 
 // simple "constructor" function to create message structs with
 // a provided text value.
-func New(text string) *Message {
+func New(text, guess string) *Message {
 	msg := new(Message)
 	msg.Text = text
+	msg.Guess = guess
 	return msg
 }
