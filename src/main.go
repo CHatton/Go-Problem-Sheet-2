@@ -29,8 +29,8 @@ func getPort() string {
 			os.Exit(0)
 		}
 	} else {
-		fmt.Println("Using default port value of 8080")
-		port = "8080"
+		fmt.Println("Using default port value of 7777")
+		port = "7777"
 	}
 	return port
 }
