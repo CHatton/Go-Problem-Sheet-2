@@ -7,22 +7,18 @@ import (
 	"strconv"
 )
 
-/*
-func handler(w http.ResponseWriter, r *http.Request) {
-	htmlPage := `<!DOCTYPE html>
-                    <html>
-                        <body>
-                            <h1>Guessing Game</h1>
-                        </body>
-                    </html>`
-
-	fmt.Fprintf(w, htmlPage)
-}
-*/
-
 func main() {
 	port := getPort()
-	http.Handle("/", http.FileServer(http.Dir("./res")))
+    // I consulted this article http://jessekallhoff.com/2013/04/14/go-web-apps-serving-static-files/
+    // on how to server specifc html pages. Not just index in the specified folder.
+    http.HandleFunc("/guess/", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "./html/guess.html")
+    })
+    // serves index.html in the res folder.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "./html/index.html")
+    })
+
 	http.ListenAndServe(":"+port, nil)
 }
 
