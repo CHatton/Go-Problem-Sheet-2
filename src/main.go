@@ -12,17 +12,31 @@ import (
 )
 
 func main() {
-	msg := message.New("Guess a number between 1 and 20", "")
+	msg := message.New("Guess a number between 1 and 20", "", "You haven't guessed yet!")
 	port := getPort()
 	// I consulted this article http://jessekallhoff.com/2013/04/14/go-web-apps-serving-static-files/
 	// on how to server specifc html pages. Not just index in the specified folder.
 	http.HandleFunc("/guess/", func(w http.ResponseWriter, r *http.Request) {
-
+		var usersGuess string
 		if userHasGuess(r) {
-			usersGuess := r.URL.Query().Get("guess")
+			usersGuess = r.URL.Query().Get("guess")
 			msg.Guess = string(usersGuess)
-		} else {
+		}
 
+		targetAsInt, _ := getTarget(r)
+		userGuessAsInt, _ := strconv.Atoi(usersGuess)
+
+		if userGuessAsInt < targetAsInt {
+			msg.DisplayMessage = "You need to guess higher!"
+		} else if userGuessAsInt > targetAsInt {
+			msg.DisplayMessage = "You need to guess lower!"
+		} else {
+			msg.DisplayMessage = "You guessed the number correctly!"
+			cookies := r.Cookies()
+			target := cookies[0]                                  // update existing cookie instead of adding one with duplicate name
+			target.Value = strconv.Itoa(rand.Intn(20) + 1)        // generate a new random number
+			target.Expires = time.Now().Add(365 * 24 * time.Hour) // reset expiry date
+			// link to new game.
 		}
 
 		if !hasCookies(r) {
@@ -48,6 +62,20 @@ func main() {
 	})
 
 	http.ListenAndServe(":"+port, nil)
+}
+
+func getTarget(r *http.Request) (int, error) {
+	cookies := r.Cookies() // all the cookies in the response
+	var err error
+	for _, cookie := range cookies {
+		if cookie.Name == "target" {
+			targetAsInt, err := strconv.Atoi(cookie.Value)
+			if err == nil {
+				return targetAsInt, nil // have the number as an integer with no error
+			}
+		}
+	}
+	return -1, err
 }
 
 func userHasGuess(r *http.Request) bool {
