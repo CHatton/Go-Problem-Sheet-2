@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+/*
 func handler(w http.ResponseWriter, r *http.Request) {
 	htmlPage := `<!DOCTYPE html>
                     <html>
@@ -17,10 +18,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, htmlPage)
 }
+*/
 
 func main() {
 	port := getPort()
-	http.HandleFunc("/", handler)
+	http.Handle("/", http.FileServer(http.Dir("./res")))
 	http.ListenAndServe(":"+port, nil)
 }
 
