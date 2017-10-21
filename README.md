@@ -50,27 +50,37 @@ The server should now be running. In order to make a http request using curl, fi
 When you do, you can use the command
 
 ```bash
-> curl http://localhost:9999
+> curl -v http://localhost:9999
 ```
 
 And you should see an output like this
 
 ```bash
-StatusCode        : 200
-StatusDescription : OK
-Content           : Guessing Game
-RawContent        : HTTP/1.1 200 OK
-                    Content-Length: 13
-                    Content-Type: text/plain; charset=utf-8
-                    Date: Sat, 14 Oct 2017 15:00:07 GMT
+ Rebuilt URL to: http://localhost:9999/
+*   Trying 127.0.0.1...
+* Connected to localhost (127.0.0.1) port 9999 (#0)
+> GET / HTTP/1.1
+> Host: localhost:9999
+> User-Agent: curl/7.47.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Accept-Ranges: bytes
+< Content-Length: 1234
+< Content-Type: text/html; charset=utf-8
+< Last-Modified: Sat, 21 Oct 2017 18:02:45 GMT
+< Date: Sat, 21 Oct 2017 19:13:32 GMT
+< 
+<!DOCTYPE html>
+<html lang="en">
+<!-- html will appear here -->
+* Connection #0 to host localhost left intact
 
-                    Guessing Game
-Forms             : {}
-Headers           : {[Content-Length, 13], [Content-Type, text/plain; charset=utf-8], [Date, Sat, 14 Oct 2017 15:00:07 GMT]}
-Images            : {}
-InputFields       : {}
-Links             : {}
-ParsedHtml        : mshtml.HTMLDocumentClass
-RawContentLength  : 13
 ```
+The 3 different endpoints in this application are
 
+```bash
+/
+/guess/
+/newgame/
+```
