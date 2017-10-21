@@ -19,7 +19,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano()) // seed rand so we get different values each time
 	ui = guessinggameui.New("Guess a number between 1 and 20", "", "You haven't guessed yet!")
 	port := getPort()
-	gameOver = false
+	gameOver = false // used as a flag to indicate if the player has guessed the correct number.
 
 	http.HandleFunc("/guess/", guessingGame)
 
@@ -33,22 +33,24 @@ func main() {
 	// on how to serve specifc html pages. Not just index in the specified folder.
 	// serves index.html in the html folder.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./html/index.html")
+		http.ServeFile(w, r, "./html/index.html") // serve a static html file.
 	})
 
-	http.ListenAndServe(":"+port, nil)
+	http.ListenAndServe(":"+port, nil) // will listen on the port specifed in the command line arguments.
 }
 
 func guessingGame(w http.ResponseWriter, r *http.Request) {
 	// I consuled this question https://stackoverflow.com/questions/15407719/in-gos-http-package-how-do-i-get-the-query-string-on-a-post-request
 	// on how to get the values received from a POST request, rather than a GET request.
-	r.ParseForm()
+
+	// from the documentation https://golang.org/pkg/net/http/#Request.ParseForm
+	r.ParseForm() // populates r.Form, we can access the query parameters of a POST request there.
 
 	var usersGuess string
-	if userHasValidGuess(r) {
-		// usersGuess = r.URL.Query().Get("guess") // for a GET request.
+
+	if userHasValidGuess(r) { // valid meaning it is a valid integer.
 		usersGuess = r.FormValue("guess") // for a POST request.
-		ui.Guess = string(usersGuess)
+		ui.Guess = string(usersGuess)     // update the struct that will be used in the template
 	}
 
 	if targetCookie, err := getTargetCookie(r); err == nil { // cookie exists, so we have a target value to guess already.
