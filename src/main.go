@@ -22,6 +22,7 @@ func main() {
 	// on how to serve specifc html pages. Not just index in the specified folder.
 	http.HandleFunc("/guess/", func(w http.ResponseWriter, r *http.Request) {
 
+		//fmt.Println(r.URL.Query().Get("guess"))
 		if !hasCookies(r) {
 			// generate a new number between 1 - 20
 			// I consulted this article https://astaxie.gitbooks.io/build-web-application-with-golang/content/en/06.1.html
@@ -32,9 +33,14 @@ func main() {
 			http.SetCookie(w, &cookie)
 		} // otherwise leave "target" at the current value
 
+		// I consuled this question https://stackoverflow.com/questions/15407719/in-gos-http-package-how-do-i-get-the-query-string-on-a-post-request
+		// on how to get the values received from a POST request, rather than a GET request.
+		r.ParseForm()
+		
 		var usersGuess string
 		if userHasGuess(r) {
-			usersGuess = r.URL.Query().Get("guess")
+			// usersGuess = r.URL.Query().Get("guess") // for a GET request.
+			usersGuess = r.FormValue("guess") // for a POST request.
 			msg.Guess = string(usersGuess)
 		}
 
@@ -62,7 +68,8 @@ func main() {
 			template.ParseFiles("./html/guess.tmpl"))
 		guessTemplate.Execute(w, msg)
 	})
-	// serves index.html in the res folder.
+
+	// serves index.html in the html folder.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./html/index.html")
 	})
@@ -82,7 +89,8 @@ func getTargetCookie(r *http.Request) (*http.Cookie, error) {
 }
 
 func userHasGuess(r *http.Request) bool {
-	return len(r.URL.Query().Get("guess")) != 0
+	// return len(r.URL.Query().Get("guess")) != 0 // For GET
+	return r.FormValue("guess") != "" // for POST
 }
 
 func hasCookies(r *http.Request) bool {
