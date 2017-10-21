@@ -1,7 +1,8 @@
 package main
 
 import (
-	"./message"
+	"./guessinggameui"
+	"errors"
 	"fmt"
 	"html/template"
 	"math/rand"
@@ -9,72 +10,81 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"errors"
 )
 
+var ui *guessinggameui.GuessingGameUI
+var gameOver bool
+
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano()) // seed rand so we get different values each time	
-	msg := message.New("Guess a number between 1 and 20", "", "You haven't guessed yet!")
+	rand.Seed(time.Now().UTC().UnixNano()) // seed rand so we get different values each time
+	ui = guessinggameui.New("Guess a number between 1 and 20", "", "You haven't guessed yet!")
 	port := getPort()
+	gameOver = false
 
-	
-	// I consulted this article http://jessekallhoff.com/2013/04/14/go-web-apps-serving-static-files/
-	// on how to serve specifc html pages. Not just index in the specified folder.
-	http.HandleFunc("/guess/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/guess/", guessingGame)
 
-		//fmt.Println(r.URL.Query().Get("guess"))
-		if !hasCookies(r) {
-			// generate a new number between 1 - 20
-			// I consulted this article https://astaxie.gitbooks.io/build-web-application-with-golang/content/en/06.1.html
-			// to learn how to set cookies in the response
-			randomNum := rand.Intn(20) + 1                     // number between 1 - 20
-			expiration := time.Now().Add(365 * 24 * time.Hour) // expires in 1 year
-			cookie := http.Cookie{Name: "target", Value: strconv.Itoa(randomNum), Expires: expiration}
-			http.SetCookie(w, &cookie)
-		} // otherwise leave "target" at the current value
-
-		// I consuled this question https://stackoverflow.com/questions/15407719/in-gos-http-package-how-do-i-get-the-query-string-on-a-post-request
-		// on how to get the values received from a POST request, rather than a GET request.
-		r.ParseForm()
-		
-		var usersGuess string
-		if userHasGuess(r) {
-			// usersGuess = r.URL.Query().Get("guess") // for a GET request.
-			usersGuess = r.FormValue("guess") // for a POST request.
-			msg.Guess = string(usersGuess)
-		}
-
-		targetCookie, err := getTargetCookie(r)
-		if err == nil { // cookie exists
-			targetAsInt, _ := strconv.Atoi(targetCookie.Value)
-			userGuessAsInt, _ := strconv.Atoi(usersGuess)
-
-			if userGuessAsInt < targetAsInt {
-				msg.DisplayMessage = "You need to guess higher!"
-			} else if userGuessAsInt > targetAsInt {
-				msg.DisplayMessage = "You need to guess lower!"
-			} else {
-				msg.DisplayMessage = "You guessed the number correctly!"
-				target, _ := getTargetCookie(r)                       // update existing cookie instead of adding one with duplicate name
-				target.Value = strconv.Itoa(rand.Intn(20) + 1)        // generate a new random number
-				target.Expires = time.Now().Add(365 * 24 * time.Hour) // reset expiry date
-				http.SetCookie(w, target) // save the cookie so this new target is saved
-
-			}
-		}
-		
-		// create the template from the template file.
-		guessTemplate := template.Must( // program will throw an error if there is a problem here
-			template.ParseFiles("./html/guess.tmpl"))
-		guessTemplate.Execute(w, msg)
+	http.HandleFunc("/newgame/", func(w http.ResponseWriter, r *http.Request) {
+		ui = guessinggameui.New("Guess a number between 1 and 20", "", "You haven't guessed yet!")
+		gameOver = false
+		guessingGame(w, r)
 	})
 
+	// I consulted this article http://jessekallhoff.com/2013/04/14/go-web-apps-serving-static-files/
+	// on how to serve specifc html pages. Not just index in the specified folder.
 	// serves index.html in the html folder.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./html/index.html")
 	})
 
 	http.ListenAndServe(":"+port, nil)
+}
+
+func guessingGame(w http.ResponseWriter, r *http.Request) {
+	// I consuled this question https://stackoverflow.com/questions/15407719/in-gos-http-package-how-do-i-get-the-query-string-on-a-post-request
+	// on how to get the values received from a POST request, rather than a GET request.
+	r.ParseForm()
+
+	var usersGuess string
+	if userHasValidGuess(r) {
+		// usersGuess = r.URL.Query().Get("guess") // for a GET request.
+		usersGuess = r.FormValue("guess") // for a POST request.
+		ui.Guess = string(usersGuess)
+	}
+
+	if targetCookie, err := getTargetCookie(r); err == nil { // cookie exists, so we have a target value to guess already.
+		// error from strconv.Atoi should always be nil unless we provide an invalid value in the Cookie in our code
+		// so we ignore it
+		targetAsInt, _ := strconv.Atoi(targetCookie.Value)
+		userGuessAsInt, conversionErr := strconv.Atoi(usersGuess)
+		if gameOver {
+			ui.DisplayMessage = "Game over! Click new game to start again."
+		} else if conversionErr != nil { // the user input was a valid integer
+			ui.DisplayMessage = "Guess a number!"
+		} else if userGuessAsInt < targetAsInt {
+			ui.DisplayMessage = "You need to guess higher!"
+		} else if userGuessAsInt > targetAsInt {
+			ui.DisplayMessage = "You need to guess lower!"
+		} else {
+			gameOver = true // display will stop updating with the users' guess until they hit new game again.
+			ui.DisplayMessage = "You guessed the number correctly!"
+			target, _ := getTargetCookie(r)                       // update existing cookie instead of adding one with duplicate name
+			target.Value = strconv.Itoa(rand.Intn(20) + 1)        // generate a new random number
+			target.Expires = time.Now().Add(365 * 24 * time.Hour) // reset expiry date
+			http.SetCookie(w, target)                             // save the cookie so this new target is saved
+		}
+	} else { // no cookie yet or the cookie expired.
+		// I consulted this article https://astaxie.gitbooks.io/build-web-application-with-golang/content/en/06.1.html
+		// to learn how to set cookies in the response
+		randomNum := rand.Intn(20) + 1                     // number between 1 - 20
+		expiration := time.Now().Add(365 * 24 * time.Hour) // expires in 1 year
+		cookie := http.Cookie{Name: "target", Value: strconv.Itoa(randomNum), Expires: expiration}
+		http.SetCookie(w, &cookie)
+	}
+
+	// create the template from the template file.
+	guessTemplate := template.Must( // program will throw an error if there is a problem here
+		template.ParseFiles("./html/guess.tmpl"))
+	guessTemplate.Execute(w, ui)
 }
 
 func getTargetCookie(r *http.Request) (*http.Cookie, error) {
@@ -84,13 +94,13 @@ func getTargetCookie(r *http.Request) (*http.Cookie, error) {
 			return cookie, nil
 		}
 	}
-
 	return nil, errors.New("Cookie does not exist.")
 }
 
-func userHasGuess(r *http.Request) bool {
-	// return len(r.URL.Query().Get("guess")) != 0 // For GET
-	return r.FormValue("guess") != "" // for POST
+func userHasValidGuess(r *http.Request) bool {
+	guess := r.FormValue("guess")
+	_, err := strconv.Atoi(guess)
+	return err == nil // the guess can be converted into an int.
 }
 
 func hasCookies(r *http.Request) bool {
